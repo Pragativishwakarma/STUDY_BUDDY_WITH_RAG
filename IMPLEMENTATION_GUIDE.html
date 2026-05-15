@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StudyBuddy RAG — Implementation Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0b1e;
+    --surface: #13102a;
+    --card: #1a1735;
+    --border: rgba(160,140,255,0.18);
+    --accent: #7c6bff;
+    --accent2: #c084fc;
+    --text: #e5e3f5;
+    --muted: #8880a8;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --code-bg: #0a0818;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    line-height: 1.7;
+    padding: 0;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,107,255,0.35) 0%, transparent 70%),
+                linear-gradient(180deg, #12103a 0%, var(--bg) 100%);
+    text-align: center;
+    padding: 80px 40px 60px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .badge {
+    display: inline-block;
+    background: rgba(124,107,255,0.2);
+    border: 1px solid rgba(124,107,255,0.4);
+    border-radius: 999px;
+    padding: 5px 18px;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 24px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff 30%, var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    margin-bottom: 20px;
+  }
+
+  .hero p {
+    font-size: 1.1rem;
+    color: var(--muted);
+    max-width: 560px;
+    margin: 0 auto 36px;
+  }
+
+  .tech-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .pill {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent2);
+  }
+
+  /* ── CONTENT ── */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 60px 32px;
+  }
+
+  /* PHASE BLOCK */
+  .phase {
+    margin-bottom: 56px;
+  }
+
+  .phase-label {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .phase-num {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .phase-title {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .phase-sub {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+
+  .card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent2);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card p, .card li {
+    font-size: 0.92rem;
+    color: #c4c0e0;
+    margin-bottom: 6px;
+  }
+
+  .card ul { padding-left: 18px; }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid rgba(124,107,255,0.25);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 12px 0;
+    overflow-x: auto;
+    position: relative;
+  }
+
+  .code-block .lang-tag {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    font-size: 0.68rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .code-block pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.84rem;
+    color: #c8c2ff;
+    line-height: 1.65;
+    white-space: pre;
+  }
+
+  .code-block .c  { color: #6b7280; }  /* comment */
+  .code-block .kw { color: #a78bfa; }  /* keyword */
+  .code-block .st { color: #6ee7b7; }  /* string */
+  .code-block .fn { color: #60a5fa; }  /* function */
+  .code-block .cm { color: #f9a8d4; }  /* command */
+  .code-block .nu { color: #fbbf24; }  /* number */
+
+  /* STEP LIST */
+  .steps {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+  }
+
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    align-items: flex-start;
+  }
+
+  .steps li::before {
+    content: counter(step);
+    min-width: 30px; height: 30px;
+    background: rgba(124,107,255,0.2);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent2);
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .steps li .step-body { flex: 1; }
+  .steps li strong { color: #fff; font-size: 0.95rem; }
+  .steps li p { color: var(--muted); font-size: 0.88rem; margin-top: 3px; }
+
+  /* FEATURE GRID */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  .feature-card {
+    background: rgba(124,107,255,0.08);
+    border: 1px solid rgba(124,107,255,0.2);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+  }
+
+  .feature-card .icon { font-size: 2rem; margin-bottom: 8px; }
+  .feature-card .label { font-size: 0.85rem; font-weight: 600; color: #d0cbff; }
+  .feature-card .desc { font-size: 0.76rem; color: var(--muted); margin-top: 4px; }
+
+  /* ARCH DIAGRAM */
+  .arch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 20px 0;
+  }
+
+  .arch-node {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 0.82rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent2);
+    text-align: center;
+  }
+
+  .arch-arrow {
+    font-size: 1.2rem;
+    color: var(--muted);
+  }
+
+  /* ALERT */
+  .alert {
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 0.88rem;
+    margin: 16px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .alert.info  { background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.3); }
+  .alert.warn  { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); }
+  .alert.good  { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3); }
+  .alert .icon { font-size: 1.2rem; flex-shrink: 0; }
+  .alert .body { color: #d0cbff; line-height: 1.55; }
+
+  /* TABLE */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.88rem;
+  }
+  th {
+    background: rgba(124,107,255,0.15);
+    color: var(--accent2);
+    text-align: left;
+    padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: #c4c0e0; }
+  tr:last-child td { border-bottom: none; }
+
+  /* DIVIDER */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 48px 0;
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+  }
+
+  code {
+    background: rgba(124,107,255,0.15);
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    color: var(--accent2);
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">📚 Full Implementation Guide</div>
+  <h1>StudyBuddy RAG<br>Assistant</h1>
+  <p>An AI-powered academic assistant with chat, summaries, quizzes, and flashcards — built with Gemini + FAISS + Streamlit.</p>
+  <div class="tech-pills">
+    <span class="pill">Streamlit</span>
+    <span class="pill">Gemini API</span>
+    <span class="pill">FAISS</span>
+    <span class="pill">SentenceTransformers</span>
+    <span class="pill">PyPDF</span>
+    <span class="pill">Python 3.10+</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="container">
+
+  <!-- FEATURES -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-num">✨</div>
+      <div>
+        <div class="phase-title">What You're Building</div>
+        <div class="phase-sub">Four powerful tools powered by RAG</div>
+      </div>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="icon">💬</div><div class="label">Chat with Notes</div><div class="desc">Ask any question from your PDF</div></div>
+      <div class="feature-card"><div class="icon">📝</div><div class="label">Auto Summary</div><div class="desc">Get concise summaries by topic</div></div>
+      <div class="feature-card"><div class="icon">❓</div><div class="label">Quiz Generator</div><div class="desc">MCQ, Short Answer, True/False</div></div>
+      <div class="feature-card"><div class="icon">🃏</div><div class="label">Flashcards</div><div class="desc">Front/Back cards for revision</div></div>
+    </div>
+  </div>
+
+  <!-- ARCHITECTURE -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-num">🔧</div>
+      <div>
+        <div class="phase-title">How RAG Works</div>
+        <div class="phase-sub">Retrieval-Augmented Generation pipeline</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="arch">
+        <div class="arch-node">📄 PDF Upload</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">✂️ Chunking</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">🧮 Embeddings</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">🗄️ FAISS Index</div>
+      </div>
+      <div class="arch" style="margin-top:8px;">
+        <div class="arch-node">❓ User Query</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">🔍 Similarity Search</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">📋 Top-K Chunks</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">🤖 Gemini LLM</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">✅ Answer</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- PHASE 1: SETUP -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-num">1</div>
+      <div>
+        <div class="phase-title">Environment Setup</div>
+        <div class="phase-sub">Create project folder and virtual environment</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📁 Create Project Structure</h3>
+      <div class="code-block">
+        <span class="lang-tag">bash</span>
+        <pre><span class="cm">mkdir</span> StudyBuddy-RAG
+<span class="cm">cd</span> StudyBuddy-RAG
+<span class="cm">mkdir</span> .streamlit</pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🐍 Create Virtual Environment</h3>
+      <p style="font-size:0.85rem; color:var(--muted); margin-bottom:10px;">Windows:</p>
+      <div class="code-block">
+        <span class="lang-tag">bash</span>
+        <pre><span class="cm">python</span> -m venv venv
+<span class="fn">venv\Scripts\activate</span></pre>
+      </div>
+      <p style="font-size:0.85rem; color:var(--muted); margin:10px 0;">Mac / Linux:</p>
+      <div class="code-block">
+        <span class="lang-tag">bash</span>
+        <pre><span class="cm">python3</span> -m venv venv
+<span class="cm">source</span> venv/bin/activate</pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📦 Install Dependencies</h3>
+      <div class="code-block">
+        <span class="lang-tag">bash</span>
+        <pre><span class="cm">pip</span> install streamlit google-generativeai sentence-transformers faiss-cpu numpy pypdf</pre>
+      </div>
+      <div class="alert info" style="margin-top:12px;">
+        <div class="icon">💡</div>
+        <div class="body">The first run downloads the <code>all-MiniLM-L6-v2</code> embedding model (~90 MB). Subsequent runs use the cached version.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 2: API KEY -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-num">2</div>
+      <div>
+        <div class="phase-title">Get Your Gemini API Key</div>
+        <div class="phase-sub">Free tier available, no credit card needed</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <ol class="steps">
+        <li>
+          <div class="step-body">
+            <strong>Go to Google AI Studio</strong>
+            <p>Visit <code>aistudio.google.com/app/apikey</code> and sign in with your Google account.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-body">
+            <strong>Create an API Key</strong>
+            <p>Click "Create API Key" → select a Google Cloud project or create a new one.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-body">
+            <strong>Copy the key</strong>
+            <p>It looks like: <code>AIzaSyABC123...</code> — copy it immediately, you won't see it again.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-body">
+            <strong>Save to secrets file</strong>
+            <p>Create <code>.streamlit/secrets.toml</code> and paste your key there.</p>
+          </div>
+        </li>
+      </ol>
+      <div class="code-block">
+        <span class="lang-tag">toml</span>
+        <pre><span class="c"># .streamlit/secrets.toml</span>
+GEMINI_API_KEY = <span class="st">"AIzaSyYourActualKeyHere"</span></pre>
+      </div>
+      <div class="alert warn">
+        <div class="icon">⚠️</div>
+        <div class="body"><strong>Never commit secrets.toml to Git.</strong> It's already in <code>.gitignore</code> — double-check before pushing.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 3: FILES -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-num">3</div>
+      <div>
+        <div class="phase-title">Add Project Files</div>
+        <div class="phase-sub">Copy the provided files into your project folder</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📂 Final Folder Structure</h3>
+      <div class="code-block">
+        <span class="lang-tag">tree</span>
+        <pre>StudyBuddy-RAG/
+├── app.py                  <span class="c">← Main application (provided)</span>
+├── requirements.txt        <span class="c">← Dependencies (provided)</span>
+├── .gitignore              <span class="c">← Git ignore rules (provided)</span>
+└── .streamlit/
+    └── secrets.toml        <span class="c">← Your API key (YOU create this)</span></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📋 requirements.txt contents</h3>
+      <div class="code-block">
+        <span class="lang-tag">txt</span>
+        <pre>streamlit>=1.35.0
+google-generativeai>=0.7.0
+sentence-transformers>=3.0.0
+faiss-cpu>=1.8.0
+numpy>=1.26.0
+pypdf>=4.2.0</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 4: RUN -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-num">4</div>
+      <div>
+        <div class="phase-title">Run Locally</div>
+        <div class="phase-sub">Launch and test the app</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="code-block">
+        <span class="lang-tag">bash</span>
+        <pre><span class="cm">streamlit</span> run app.py</pre>
+      </div>
+      <p style="color:var(--muted); font-size:0.88rem; margin-top:10px;">Streamlit opens <code>http://localhost:8501</code> in your browser automatically.</p>
+    </div>
+
+    <div class="card">
+      <h3>🧪 Test Checklist</h3>
+      <ul>
+        <li>✅ Upload a PDF from the sidebar — should show "X chunks indexed!"</li>
+        <li>✅ Type a question in the Chat tab and get an AI answer</li>
+        <li>✅ Click "Generate Summary" with and without a topic</li>
+        <li>✅ Generate a 5-question Multiple Choice quiz</li>
+        <li>✅ Create 10 flashcards and expand them</li>
+        <li>✅ Adjust chunk size slider and re-upload — results should change</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PHASE 5: DEPLOY -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-num">5</div>
+      <div>
+        <div class="phase-title">Deploy to Streamlit Cloud</div>
+        <div class="phase-sub">Free hosting in under 5 minutes</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <ol class="steps">
+        <li>
+          <div class="step-body">
+            <strong>Push to GitHub</strong>
+            <p>Make sure <code>.gitignore</code> is in place so secrets aren't uploaded.</p>
+          </div>
+        </li>
+      </ol>
+      <div class="code-block">
+        <span class="lang-tag">bash</span>
+        <pre><span class="cm">git</span> init
+<span class="cm">git</span> add .
+<span class="cm">git</span> commit -m <span class="st">"StudyBuddy RAG initial commit"</span>
+<span class="cm">git</span> branch -M main
+<span class="cm">git</span> remote add origin YOUR_GITHUB_REPO_URL
+<span class="cm">git</span> push -u origin main</pre>
+      </div>
+      <ol class="steps" style="margin-top:20px; counter-reset:step 1;">
+        <li>
+          <div class="step-body">
+            <strong>Open share.streamlit.io</strong>
+            <p>Sign in with GitHub. Click "New app".</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-body">
+            <strong>Connect your repo</strong>
+            <p>Select your repo, branch <code>main</code>, and main file <code>app.py</code>.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-body">
+            <strong>Add the secret</strong>
+            <p>Under "Advanced settings" → Secrets, paste:</p>
+          </div>
+        </li>
+      </ol>
+      <div class="code-block">
+        <span class="lang-tag">toml</span>
+        <pre>GEMINI_API_KEY = <span class="st">"AIzaSyYourActualKeyHere"</span></pre>
+      </div>
+      <ol class="steps" style="margin-top:12px; counter-reset:step 4;">
+        <li>
+          <div class="step-body">
+            <strong>Click "Deploy!"</strong>
+            <p>Streamlit Cloud builds and serves your app at a public URL in ~2 minutes.</p>
+          </div>
+        </li>
+      </ol>
+      <div class="alert good">
+        <div class="icon">🎉</div>
+        <div class="body">Your app is live! Share the URL with classmates. Streamlit Cloud's free tier gives you 1 GB RAM and unlimited public apps.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TECH TABLE -->
+  <div class="divider"></div>
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-num">📊</div>
+      <div>
+        <div class="phase-title">Tech Stack Reference</div>
+      </div>
+    </div>
+    <div class="card">
+      <table>
+        <tr><th>Component</th><th>Tool</th><th>Why</th></tr>
+        <tr><td>UI</td><td>Streamlit</td><td>Python-native, fast to build</td></tr>
+        <tr><td>LLM</td><td>Gemini 1.5 Flash</td><td>Fast, cheap, great at instruction-following</td></tr>
+        <tr><td>Embeddings</td><td>all-MiniLM-L6-v2</td><td>Lightweight, runs locally, no API cost</td></tr>
+        <tr><td>Vector DB</td><td>FAISS (flat L2)</td><td>In-memory, zero setup, blazing fast</td></tr>
+        <tr><td>PDF Parser</td><td>PyPDF</td><td>Pure Python, handles most PDFs</td></tr>
+        <tr><td>Hosting</td><td>Streamlit Cloud</td><td>Free, GitHub-integrated, instant deploys</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- UPGRADES -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-num">🚀</div>
+      <div>
+        <div class="phase-title">Next-Level Upgrades</div>
+        <div class="phase-sub">Add these to make it internship-portfolio quality</div>
+      </div>
+    </div>
+    <div class="card">
+      <ul style="list-style:none; padding:0;">
+        <li style="padding:10px 0; border-bottom:1px solid var(--border);">
+          <strong style="color:#fff;">🔄 Multi-PDF Support</strong>
+          <p style="color:var(--muted); font-size:0.85rem; margin-top:3px;">Use <code>accept_multiple_files=True</code> and merge all chunks into one FAISS index.</p>
+        </li>
+        <li style="padding:10px 0; border-bottom:1px solid var(--border);">
+          <strong style="color:#fff;">🧠 Subject-Wise Memory</strong>
+          <p style="color:var(--muted); font-size:0.85rem; margin-top:3px;">Keep separate FAISS indexes per subject (DBMS, ML, OS) using <code>st.session_state</code>.</p>
+        </li>
+        <li style="padding:10px 0; border-bottom:1px solid var(--border);">
+          <strong style="color:#fff;">🔊 Voice Input</strong>
+          <p style="color:var(--muted); font-size:0.85rem; margin-top:3px;">Add <code>streamlit-mic-recorder</code> + Google Speech API for hands-free questions.</p>
+        </li>
+        <li style="padding:10px 0; border-bottom:1px solid var(--border);">
+          <strong style="color:#fff;">💾 Persistent Storage</strong>
+          <p style="color:var(--muted); font-size:0.85rem; margin-top:3px;">Save FAISS indexes to disk with <code>faiss.write_index()</code> so re-uploads aren't needed.</p>
+        </li>
+        <li style="padding:10px 0;">
+          <strong style="color:#fff;">🦜 LangChain + ChromaDB</strong>
+          <p style="color:var(--muted); font-size:0.85rem; margin-top:3px;">Replace raw FAISS with LangChain's retrieval chain for smarter hybrid search + conversation memory.</p>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- RESUME -->
+  <div class="phase">
+    <div class="phase-label">
+      <div class="phase-num">📄</div>
+      <div>
+        <div class="phase-title">Resume Description</div>
+      </div>
+    </div>
+    <div class="card">
+      <p style="font-style:italic; color:#c4c0e0; line-height:1.8;">
+        "Built <strong style="color:#fff;">StudyBuddy RAG Assistant</strong> — an AI-powered academic tool using Retrieval-Augmented Generation (RAG) with Gemini 1.5 Flash, FAISS vector database, Sentence Transformers, and Streamlit. Features include contextual Q&A from uploaded PDFs, automated summarization, quiz generation (MCQ / Short Answer / True-False), and flashcard creation with subject-specific retrieval and conversation history."
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  StudyBuddy RAG · Built with Gemini + FAISS + Streamlit · Deploy free on Streamlit Cloud
+</footer>
+
+</body>
+</html>
